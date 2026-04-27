@@ -34,6 +34,12 @@ namespace GreenSwampApp.Models
         [Column("updated_at")]
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+        [Column("reribbs_count")]
+        public int ReribbsCount { get; set; }
+
+        [Column("answers_count")]
+        public int AnswersCount { get; set; }
+
         // Navigation properties
         [ForeignKey("UserId")]
         public virtual User User { get; set; }

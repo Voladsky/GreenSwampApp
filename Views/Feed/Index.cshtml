@@ -2,6 +2,11 @@
 @{
     ViewData["Title"] = "Greenswamp Feed";
 }
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@{
+    var antiforgeryToken = Antiforgery.GetAndStoreTokens(Context);
+}
+<input type="hidden" name="__RequestVerificationToken" value="@antiforgeryToken.RequestToken" />
 
 <!DOCTYPE html>
 <html lang="en">
@@ -40,25 +45,33 @@
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-0 lg:divide-x sm:divide-y lg:h-[calc(100vb-4rem)]">
 
             <!-- Left Sidebar -->
+            <!-- Left Sidebar -->
             <div class="lg:col-span-1 bg-white order-1">
-                <div class="p-6 space-y-4">
-                    <div class="flex items-center space-x-2">
-                        <img src="/images/green-toad-logo.svg" alt="Greenswamp Logo" class="h-8 w-8">
-                        <span class="text-2xl font-bold text-swamp-600">Greenswamp</span>
+                @if (User.Identity.IsAuthenticated)
+                {
+                        @await Component.InvokeAsync("UserSidebar");
+                }
+                else
+                {
+                    <div class="p-6 space-y-4">
+                        <div class="flex items-center space-x-2">
+                            <img src="/images/green-toad-logo.svg" alt="Greenswamp Logo" class="h-8 w-8">
+                            <span class="text-2xl font-bold text-swamp-600">Greenswamp</span>
+                        </div>
+                        <div class="space-x-2">
+                            <a href="/register">
+                                <button class="bg-swamp-500 font-semibold text-white px-4 py-2 rounded-full hover:bg-swamp-600">
+                                    Register
+                                </button>
+                            </a>
+                            <a href="/login">
+                                <button class="bg-slate-200 font-semibold text-slate-900 px-4 py-2 rounded-full hover:bg-slate-300">
+                                    Login
+                                </button>
+                            </a>
+                        </div>
                     </div>
-                    <div class="space-x-2">
-                        <a href="/register">
-                            <button class="bg-swamp-500 font-semibold text-white px-4 py-2 rounded-full hover:bg-swamp-600">
-                                Register
-                            </button>
-                        </a>
-                        <a href="/login">
-                            <button class="bg-slate-200 font-semibold text-slate-900 px-4 py-2 rounded-full hover:bg-slate-300">
-                                Login
-                            </button>
-                        </a>
-                    </div>
-                </div>
+                }
             </div>
 
             <!-- Main Feed - DYNAMIC CONTENT -->
@@ -68,7 +81,7 @@
                     @if (item.Type == "post")
                     {
                         <!-- Post Card -->
-                        <div class="bg-white shadow-sm p-6">
+                        <div class="bg-white shadow-sm p-6" data-post-itemid="@item.Post.PostId">
                             <div class="flex items-start space-x-3">
                                 <img src="@item.Post.User.AvatarUrl" alt="@item.Post.User.DisplayName" class="w-16 h-16 rounded-full">
                                 <div class="flex-1">
@@ -97,13 +110,13 @@
                                         </div>
                                     }
                                     <div class="mt-4 flex items-center space-x-6 text-swamp-500">
-                                        <button class="flex items-center space-x-2 hover:text-swamp-600">
+                                        <button class="flex items-center space-x-2 hover:text-swamp-600" data-post-id="@item.Post.PostId">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                             </svg>
                                             <span>@item.Post.AnswersCount Answers</span>
                                         </button>
-                                        <button class="flex items-center space-x-2 hover:text-swamp-600">
+                                        <button class="flex items-center space-x-2 hover:text-swamp-600" data-post-id="@item.Post.PostId">
                                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                                             </svg>
@@ -220,25 +233,116 @@
     </div>
 
     <!-- Post Modal -->
-    <div id="postModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+    <div id="postModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-2xl w-full p-6">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-semibold">New Ribbit</h3>
-                <button onclick="closePostModal()" class="text-swamp-500 hover:text-swamp-700">✕</button>
+                <button onclick="closePostModal()" class="text-swamp-500 hover:text-swamp-700 text-2xl leading-none">&times;</button>
             </div>
-            <textarea class="w-full p-4 border border-swamp-200 rounded-lg focus:ring-2 focus:ring-swamp-400 focus:border-transparent"
+            <textarea id="postContent"
+                      class="w-full p-4 border border-swamp-200 rounded-lg focus:ring-2 focus:ring-swamp-400 focus:border-transparent"
                       rows="4"
                       placeholder="What's hopping?"></textarea>
             <div class="mt-4 flex justify-between items-center">
                 <div class="space-x-2">
-                    <button class="p-2 hover:bg-swamp-100 rounded-lg">🐸 Add Frogmoji</button>
+                    <button type="button" class="p-2 hover:bg-swamp-100 rounded-lg" onclick="insertFrogmoji()">🐸 Add Frogmoji</button>
                 </div>
-                <button class="bg-swamp-500 text-white px-6 py-2 rounded-full hover:bg-swamp-600">
+                <button id="sendRibbitBtn"
+                        class="bg-swamp-500 text-white px-6 py-2 rounded-full hover:bg-swamp-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
                     Send Ribbit
                 </button>
             </div>
+            <div id="postError" class="mt-3 text-red-600 text-sm hidden"></div>
         </div>
     </div>
+
+    <script>
+        // Get CSRF token from the anti-forgery cookie (ASP.NET Core)
+        function getCsrfToken() {
+        const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('__RequestVerificationToken='));
+        return cookieValue ? cookieValue.split('=')[1] : null;
+        }
+
+        async function createPost(content) {
+        const token = getCsrfToken();
+        const response = await fetch('/api/posts', {
+        method: 'POST',
+        headers: {
+        'Content-Type': 'application/json',
+        'RequestVerificationToken': token || ''
+        },
+        body: JSON.stringify({ content: content })
+        });
+
+        if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to create post' }));
+        throw new Error(errorData.message || `Server error: ${response.status}`);
+        }
+        return await response.json();
+        }
+
+        // Insert a random frogmoji or emoji list
+        function insertFrogmoji() {
+        const textarea = document.getElementById('postContent');
+        const emojis = ['🐸', '🐸✨', '🐸💚', '🐸🌿', '🐸📢', '🐸🎤', '🐸👑', '🐸🔥'];
+        const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        textarea.value = text.substring(0, start) + randomEmoji + text.substring(end);
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + randomEmoji.length;
+        }
+
+        // Main submit handler
+        document.getElementById('sendRibbitBtn').addEventListener('click', async () => {
+        const textarea = document.getElementById('postContent');
+        const content = textarea.value.trim();
+        const errorDiv = document.getElementById('postError');
+        const sendBtn = document.getElementById('sendRibbitBtn');
+
+        if (!content) {
+        errorDiv.textContent = 'Please write something before ribbiting!';
+        errorDiv.classList.remove('hidden');
+        return;
+        }
+
+        // Disable button, show loading
+        sendBtn.disabled = true;
+        sendBtn.textContent = 'Sending...';
+        errorDiv.classList.add('hidden');
+
+        try {
+        await createPost(content);
+        // Success – close modal, clear text, optionally reload feed
+        closePostModal();
+        textarea.value = '';
+        // Reload the feed to show the new post (or optionally append it dynamically)
+        window.location.reload();
+        } catch (err) {
+        errorDiv.textContent = err.message || 'An error occurred. Please try again.';
+        errorDiv.classList.remove('hidden');
+        } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = 'Send Ribbit';
+        }
+        });
+
+        // Allow Ctrl+Enter to submit
+        document.getElementById('postContent').addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('sendRibbitBtn').click();
+        }
+        });
+
+        // Clear error when typing
+        document.getElementById('postContent').addEventListener('input', () => {
+        document.getElementById('postError').classList.add('hidden');
+        });
+    </script>
 
     <script>
         function openPostModal() {

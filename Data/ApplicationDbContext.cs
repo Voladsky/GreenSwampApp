@@ -1,9 +1,12 @@
-﻿using GreenSwampApp.Models;
+﻿// Data/ApplicationDbContext.cs
+using GreenSwampApp.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace GreenSwampApp.Data
 {
-    public class ApplicationDbContext : DbContext
+    public class ApplicationDbContext : IdentityDbContext<Auth, IdentityRole<long>, long>
     {
         public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
             : base(options)
@@ -22,28 +25,66 @@ namespace GreenSwampApp.Data
         {
             base.OnModelCreating(modelBuilder);
 
-            // Composite primary key for PostTag
+            // Настройка Identity таблиц с существующими именами
+            modelBuilder.Entity<Auth>(entity =>
+            {
+                entity.ToTable("auth");
+                entity.Property(e => e.Id).HasColumnName("user_id");
+                entity.Property(e => e.UserName).HasColumnName("username");
+                entity.Property(e => e.Email).HasColumnName("email");
+                entity.Property(e => e.NormalizedUserName).HasColumnName("normalized_username");
+                entity.Property(e => e.NormalizedEmail).HasColumnName("normalized_email");
+            });
+
+            modelBuilder.Entity<IdentityRole<long>>(entity =>
+            {
+                entity.ToTable("roles");
+            });
+
+            modelBuilder.Entity<IdentityUserRole<long>>(entity =>
+            {
+                entity.ToTable("user_roles");
+            });
+
+            modelBuilder.Entity<IdentityUserClaim<long>>(entity =>
+            {
+                entity.ToTable("user_claims");
+            });
+
+            modelBuilder.Entity<IdentityUserLogin<long>>(entity =>
+            {
+                entity.ToTable("user_logins");
+            });
+
+            modelBuilder.Entity<IdentityRoleClaim<long>>(entity =>
+            {
+                entity.ToTable("role_claims");
+            });
+
+            modelBuilder.Entity<IdentityUserToken<long>>(entity =>
+            {
+                entity.ToTable("user_tokens");
+            });
+
+            // Остальные конфигурации...
             modelBuilder.Entity<PostTag>()
                 .HasKey(pt => new { pt.PostId, pt.TagId });
 
-            // Composite primary key for Follower
             modelBuilder.Entity<Follower>()
                 .HasKey(f => new { f.FollowerId, f.FollowingId });
 
-            // Configure Follower relationships
             modelBuilder.Entity<Follower>()
                 .HasOne(f => f.FollowerUser)
-                .WithMany(u => u.Following)  // User has many Following relationships
+                .WithMany(u => u.Following)
                 .HasForeignKey(f => f.FollowerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             modelBuilder.Entity<Follower>()
                 .HasOne(f => f.FollowingUser)
-                .WithMany(u => u.Followers)  // User has many Followers relationships
+                .WithMany(u => u.Followers)
                 .HasForeignKey(f => f.FollowingId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Indexes for performance
             modelBuilder.Entity<Post>()
                 .HasIndex(p => p.CreatedAt)
                 .HasDatabaseName("IX_Posts_CreatedAt");
@@ -61,14 +102,12 @@ namespace GreenSwampApp.Data
                 .HasIndex(i => new { i.PostId, i.InteractionType })
                 .HasDatabaseName("IX_Interactions_PostId_Type");
 
-            // Post relationships
             modelBuilder.Entity<Post>()
                 .HasOne(p => p.User)
                 .WithMany(u => u.Posts)
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Event relationships
             modelBuilder.Entity<Event>()
                 .HasOne(e => e.Post)
                 .WithOne(p => p.Event)
@@ -81,7 +120,6 @@ namespace GreenSwampApp.Data
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Interaction relationships
             modelBuilder.Entity<Interaction>()
                 .HasOne(i => i.Post)
                 .WithMany(p => p.Interactions)
